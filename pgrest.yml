@@ -1,0 +1,52 @@
+version: "3"
+
+services:
+  db:
+    image: postgres:latest
+    restart: "no"
+    environment:
+      POSTGRES_PASSWORD: $DB_PASS
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+      - ./initsql/init_db.sql:/docker-entrypoint-initdb.d/init01.sql
+    ports:
+      - 5432:5432
+  adminer:
+    image: adminer
+    restart: always
+    environment:
+      ADMINER_DEFAULT_DB_DRIVER: pgsql
+      ADMINER_SERVER: db
+      ADMINER_DB: $DB_NAME
+      ADMINER_PASSWORD: $DB_PASS
+      ADMINER_DESIGN: "nette"
+    ports:
+      - 8888:8080
+    depends_on:
+      - db
+  authpoint:
+    image: tarent/loginsrv
+    environment:
+      COOKIE_SECURE: false
+      LOGINSRV_JWT_SECRET: $PGRST_JWT_SECRET
+      LOGINSRV_SIMPLE: provider=simple,bob=secret
+      LOGINSRV_HTPASSWD: file=/home/.htpasswd
+      LOGINSRV_USER_FILE: /home/authdata.yml
+    volumes:
+      - ./authdata.yml:/home/authdata.yml
+      - ./.htpasswd:/home/.htpasswd
+    ports:
+      - 8080:8080
+  pgrest:
+    image: postgrest/postgrest
+    ports:
+      - "${PGRST_SERVER_PORT}:${PGRST_SERVER_PORT}"
+    environment:
+      PGRST_SERVER_PORT: $PGRST_SERVER_PORT
+      PGRST_DB_URI: "postgres://postgres:${DB_PASS}@db:5432/${DB_NAME}"
+      PGRST_DB_SCHEMA: api
+      PGRST_DB_ANON_ROLE: web_anon
+      PGRST_OPENAPI_SERVER_PROXY_URI: http://127.0.0.1:${PGRST_SERVER_PORT}
+      PGRST_JWT_SECRET: $PGRST_JWT_SECRET
+    depends_on:
+      - db   

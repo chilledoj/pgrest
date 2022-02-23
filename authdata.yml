@@ -1,0 +1,13 @@
+- sub: bob
+  origin: simple
+  claims:
+    role: todo_user
+    projects:
+      - example
+- origin: htpasswd
+  claims:
+    role: admin
+    projects:
+      - example
+- claims:
+    role: web_anon
